@@ -2,9 +2,10 @@ module Game
   CODE_PEGS = ["red", "blue", "yellow", "green", "orange", "purple"]
 
   class DecodingBoard
-    attr_accessor :code
+    attr_accessor :code, :guess
     def initialize
-      @code = ["column1", "column2", "column3", "column4"]
+      @code = Array.new(4, "column")
+      @guess = Array.new(4, "column")
     end
 
     def displayCode
@@ -26,10 +27,10 @@ module Game
       iterator = 0
 
       while (iterator < guess_arr.length)
-        currentGuess = guess_arr[iterator]
-        codeItem = @code[iterator]
+        current_guess = guess_arr[iterator]
+        code_item = @code[iterator]
 
-        if currentGuess == codeItem
+        if current_guess == code_item
           position += 1
         end
 
@@ -42,8 +43,12 @@ module Game
     def check_colors(guess_arr)
       color = 0
       unique_colors = guess_arr.uniq
-      unique_colors.each do |currentColor|
-        color += code.count(currentColor)
+      unique_colors.each do |current_color|
+        if guess_arr.count(current_color) < code.count(current_color)
+          color += guess_arr.count(current_color)
+        elsif guess_arr.count(current_color) >= code.count(current_color)
+          color += code.count(current_color)
+        end
       end
       
       puts "Number of correct colors: #{color}"
@@ -53,15 +58,26 @@ module Game
       guess_arr == @code
     end
 
-    def computer_guess
-      #make a guess algo
+    def computer_guess(code_to_guess)
+      iterator = 0
+
+      while iterator < code_to_guess.length
+        if @guess[iterator]!= code_to_guess[iterator]
+          @guess[iterator] = CODE_PEGS.sample
+        end
+        
+        iterator += 1
+      end
     end
   end
 
   class Codemaker
+    attr_accessor :code
+
     def initialize(name)
       @name = name
       @role = "Codemaker"
+      @code = Array.new(4)
     end
 
     def set_code
@@ -80,7 +96,20 @@ module Game
         column_index += 1
       end
       puts "code created..."
-      code
+      @code = code
+    end
+
+    def num_of_tries
+      choices = [8, 10, 12]
+      puts "How many tries would you like to give the computer?"
+      print "Choices are 8, 10, 12: "
+      user_input = gets.chomp
+      until (choices.include?(user_input.to_i))
+        print "Choices are 8, 10, 12: "
+        user_input = gets.chomp
+      end
+
+      user_input.to_i
     end
   end
   
@@ -118,22 +147,20 @@ module Game
     m - Codemaker 
   }
 
-  gameMode = (gets.chomp).downcase
-  until ['b', 'm'].include?(gameMode)
+  game_mode = (gets.chomp).downcase
+  until ['b', 'm'].include?(game_mode)
     puts "The choices are either 'b' or 'm'"
-    gameMode = (gets.chomp).downcase
+    game_mode = (gets.chomp).downcase
   end
 
-  if (gameMode == 'b')
+  if (game_mode == 'b')
     print "Enter your name: "
     player = Codebreaker.new(gets.chomp.strip)
-    player = player
     board = DecodingBoard.new
     board.computer_set_code
     guess = []
 
     12.times do
-      board.displayCode
       guess = player.guess
       board.check_positions(guess)
       board.check_colors(guess)
@@ -146,10 +173,31 @@ module Game
     
     unless board.player_win?(guess)
       puts "You failed this game..."
+      puts "The code was: "
+      board.displayCode
     end
   end
 
-  if (gameMode == 'm')
-    #continue tomorrow
+  if (game_mode == 'm')
+    print "Enter your name: "
+    player = Codemaker.new(gets.chomp.strip)
+    board = DecodingBoard.new
+    player.set_code
+    puts "The code to play for: #{player.code}"
+    tries = player.num_of_tries
+
+    tries.times do
+      board.computer_guess(player.code)
+      puts "Computer guessed: #{board.guess}"
+      if board.guess == player.code
+        puts "The computer guessed the code!"
+        break
+      end
+    end
+
+    unless board.guess == player.code
+      puts "The computer failed to guess the code..."
+      puts "#{player.name} wins!"
+    end
   end
 end
